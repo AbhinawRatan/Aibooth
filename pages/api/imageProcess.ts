@@ -1,39 +1,61 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
+
+const taskStatusStore = new Map();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
-    console.log('Received POST request');
-    try {
-      // Extracting image and prompt from the request body
-      const { image, prompt } = req.body;
-      console.log('Request body:', { image, prompt });
-
-      // Logging the API key usage
-      console.log('Using Gooey API Key:', process.env.GOOEY_API_KEY);
-
-      // Sending a request to the Gooey AI API
-      const gooeyResponse = await axios.post('https://api.gooey.ai/v2/Img2Img/', {
-        input_image: image,
-        prompt: prompt,
-      }, {
-        headers: { 'Authorization': `Bearer ${process.env.GOOEY_API_KEY}` }
-      });
-
-      console.log('Gooey AI API response:', gooeyResponse.data);
-
-      // Responding with the data received from the Gooey AI API
-      res.status(200).json(gooeyResponse.data);
-    } catch (error) {
-      // Catching and logging any errors that occur during the process
-      console.error('Error in processing:', error);
-      // Responding with an error message if something goes wrong
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
+    return handlePostRequest(req, res);
+  } else if (req.method === 'GET') {
+    return handleGetRequest(req, res);
   } else {
-    // Handling any non-POST requests to this endpoint
-    console.log(`Received a non-POST request: ${req.method}`);
-    res.setHeader('Allow', ['POST']);
+    res.setHeader('Allow', ['POST', 'GET']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
+}
+
+async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
+  const { image, prompt } = req.body;
+  const taskId = uuidv4(); // Generate a unique task ID
+
+  taskStatusStore.set(taskId, { status: 'processing' });
+  processImageAsync(taskId, image, prompt);
+
+  res.status(202).json({ taskId, status: 'processing' });
+}
+
+async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
+  const { taskId } = req.query;
+
+  const taskStatus = taskStatusStore.get(taskId);
+  if (!taskStatus) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
+  res.status(200).json(taskStatus);
+}
+
+async function processImageAsync(taskId: string, image: string, prompt: string) {
+  try {
+    const gooeyResponse = await axios.post('https://api.gooey.ai/v2/Img2Img/', {
+      input_image: image,
+      prompt: prompt,
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.GOOEY_API_KEY}` },
+      timeout: 8000
+    });
+
+    taskStatusStore.set(taskId, { status: 'completed', data: gooeyResponse.data });
+  } catch (error) {
+    console.error('Error in processing:', error);
+    taskStatusStore.set(taskId, { status: 'failed', error: getErrorMessage(error) });
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unknown error occurred';
 }
