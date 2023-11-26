@@ -64,6 +64,9 @@ const AiBoothComponent: React.FC = () => {
       setLoading(false);
     }
   };
+  const resetPage = () => {
+    window.location.reload();
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -89,20 +92,22 @@ const AiBoothComponent: React.FC = () => {
       </>
     )}
     {imageUrl && (
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-xs mb-4">
-        <input 
-          {...register('prompt', { required: true })}
-          className="shadow appearance-none border rounded w-full py-4 px-4 mb-6 leading-tight focus:outline-none focus:shadow-outline text-black"
-          placeholder="Enter your prompt"
-          disabled={loading}
-        />
-        {errors.prompt && <span className="text-red-500 text-xs italic ">This field is required</span>}
-        <input 
-          type="submit" 
-          className="glassmorphism text-white font-bold py-2 px-4 rounded "
-          disabled={loading}
-        />
-      </form>
+ <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-xs mb-4">
+ <input 
+   {...register('prompt', { required: false })}
+   className="hidden shadow appearance-none border rounded w-full py-4 px-4 mb-6 leading-tight focus:outline-none focus:shadow-outline text-black"
+   disabled={loading}
+ />
+ {errors.prompt && <span className="text-red-500 text-xs italic">This field is required</span>}
+
+ <div className="flex justify-center">
+   <input 
+     type="submit" 
+     className="glassmorphism text-white font-bold py-2 px-4 rounded"
+     disabled={loading}
+   />
+ </div>
+</form>
     )}
     {loading && <p>Loading...</p>}
     {processedImageUrl && (
@@ -110,14 +115,22 @@ const AiBoothComponent: React.FC = () => {
       <h2 className="text-xl font-bold mb-2 text-center">Processed Image</h2>
       <img src={processedImageUrl} alt="Processed" className="w-full max-w-lg rounded-lg shadow-md mx-auto" />
       <div className="flex justify-center mt-4">
-        <a 
-          href={processedImageUrl} 
-          download="processed-image.jpg"
-          className="glassmorphism text-white font-bold py-2 px-4 rounded"
-        >
-          Download Image
-        </a>
+      <a 
+  href={processedImageUrl} 
+  download="processed-image.jpg"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="glassmorphism text-white font-bold py-2 px-4 rounded"
+>
+  Download Image
+</a>
       </div>
+      <button 
+        onClick={resetPage} 
+        className="glassmorphism text-white font-bold py-2 px-4 rounded mb-4"
+      >
+        Reset
+      </button>
     </div>
     )}
   </div>
